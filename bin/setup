@@ -1,0 +1,42 @@
+#!/bin/bash
+set -e
+
+source "${OPENSHIFT_NGINX_DIR}/bin/setup_util.sh"
+
+# Archive/LFS configuration
+declare -a ARCHIVE_SERVERS
+ARCHIVE_SERVERS=( "http://download-bcartridges.rhcloud.com/nginx" )
+LFS_ENDPOINT=https://github.com/boekkooi/openshift-cartridge-nginx.git/info/lfs
+
+# Resolve version
+case "$1" in
+  -v|--version)
+    version="$2"
+esac
+
+NGINX_VERSION=1.11.1
+if [ ! -z "${OPENSHIFT_NGINX_VERSION}" ] && [ -f "${OPENSHIFT_NGINX_DIR}/usr/nginx-${OPENSHIFT_NGINX_VERSION}.tar.gz" ]; then
+    NGINX_VERSION="${OPENSHIFT_NGINX_VERSION}"
+elif [ -f "${OPENSHIFT_NGINX_DIR}/usr/nginx-${version}.tar.gz" ]; then
+    NGINX_VERSION="${version}"
+fi
+NGINX_VERSION_DIR="${OPENSHIFT_NGINX_DIR}/usr/nginx-${NGINX_VERSION}"
+
+# Download and extract PHP version from LFS
+nginx_download_and_unpack
+if [ ! -d "${NGINX_VERSION_DIR}" ]; then
+    echo "Failed to download and extract nginx from LFS"
+    exit 1
+fi
+
+# Create dirs
+dirs=( "logs" "run" )
+for dir in ${dirs[@]}; do
+    mkdir -p "${OPENSHIFT_NGINX_DIR}/${dir}"
+done
+
+# Set version env variable
+export OPENSHIFT_NGINX_VERSION=${NGINX_VERSION}
+
+echo "${NGINX_VERSION}" > ${OPENSHIFT_NGINX_DIR}/env/OPENSHIFT_NGINX_VERSION
+echo "${NGINX_VERSION_DIR}" > ${OPENSHIFT_NGINX_DIR}/env/OPENSHIFT_NGINX_VERSION_DIR
